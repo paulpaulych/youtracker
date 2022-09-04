@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script>
+            function getProjects() {
+                return fetch("/projects")
+                    .then (res => {
+                        if (res.status != 200) {
+                            return Promise.reject("Ошибка при получении списка проектов: " + res.json())
+                        }
+                        return Promise.resolve(res.json())
+                    })
+            }
+
+            function loadProjects() {
+                getProjects()
+                    .then(projects => {
+                        var select = document.getElementById("projects")
+                        const opts = projects.map(p => {
+                            var opt = document.createElement("option")
+                            opt.value = p.id
+                            opt.innerHTML = p.shortName
+                            return opt
+                        })
+                        opts.map(it => select.appendChild(it))
+                    })
+                    .catch(e => console.log(e))
+            }
+
+            function getUsers() {
+                return fetch("/users")
+                    .then (res => {
+                        if (res.status != 200) {
+                            return Promise.reject("Ошибка при получении списка проектов: " + res.json())
+                        }
+                        return Promise.resolve(res.json())
+                    })
+            }
+
+            function loadUsers() {
+                getUsers()
+                    .then(projects => {
+                        var select = document.getElementById("users")
+                        const opts = projects.map(u => {
+                            var opt = document.createElement("option")
+                            opt.value = u.login
+                            opt.innerHTML = u.fullName
+                            return opt
+                        })
+                        opts.map(it => select.appendChild(it))
+                    })
+                    .catch(e => console.log(e))
+            }
+
+            function createSuccessFeedback(issues) {
+                alert("Задачи успено созданы(см. Ссылки в консоли)")
+                console.log("Созданы задачи:\n")   
+                const hrefs = issues.map(it => it.href)
+                    .reduce((a, b) => a + '\n' + b, "")
+                console.log(hrefs)   
+            }
+
+            function setSubmitHandler() {
+                const form = document.getElementById("createIssuesForm")
+                form.addEventListener("submit", (e) => {
+                    e.preventDefault()
+                    const projectId = e.target.elements.projectId.value
+                    const assigneeLogin = e.target.elements.assigneeLogin.value
+                    const summaries = [...e.target.elements.summaries.options]
+                        .filter(option => option.selected)
+                        .map(option => option.value)
+
+                    fetch("/issues", {
+                        method: "POST",
+                        body: JSON.stringify({projectId, summaries, assigneeLogin}),
+                        headers: {
+                            "Content-Type": "application/json"
+                        }
+                    }).then(res => {
+                        if (res.status !== 200) {
+                            return Promise.reject("ОШИБКА: " + res)
+                        }
+                        return res.json()
+                    })
+                    .then(createSuccessFeedback)
+                    .catch(e => {
+                        alert("Ошибка запроса к серверу: " + e)
+                    })
+                })
+            }
+
+            window.onload = () => {
+                loadProjects()
+                loadUsers()
+                setSubmitHandler()
+            }
+        </script>
+    </head>
+    <body>
+        <form id="createIssuesForm">
+            <div style="display: flex; flex-direction: column;">
+                <div>
+                    <label>Идентификатор проекта</label>
+                    <select name="projectId" id="projects">
+                    </select>
+                </div>
+                <div>
+                    <label>Исполнитель</label>
+                    <select name="assigneeLogin" id="users">
+                    </select>
+                </div>
+                <div style="display: flex;">
+                    <label>Темы задач</label>
+                    <select name="summaries" multiple="multiple" size="4">
+                        <option>Регистрация нового сотрудника в YouTrack</option>
+                        <option>Предоставление доступа к YouTrack</option>
+                        <option>Выдача пропуска</option>
+                    </select>
+                </div>
+                <br>
+                <button type="submit">Создать задачи</button>
+            </div>
+        </form>
+    </body>
+</html>
